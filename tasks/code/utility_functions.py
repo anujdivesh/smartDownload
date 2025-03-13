@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime, timedelta
-import netCDF4
+import netCDF4 as nc
 import xarray as xr
 from controller_country import initialize_countryController
 import os
@@ -479,3 +479,21 @@ class Utility:
         else:
             print("Error: Failed to generate a new token.")
             return None
+    @staticmethod
+    def multiply_netcdf_values(file_path,value):
+        """
+        Multiply all variables in a NetCDF file by 100 and save the result back to the same file.
+
+        Args:
+            file_path (str): Path to the NetCDF file.
+        """
+        # Open the NetCDF file in append mode to modify it
+        with nc.Dataset(file_path, 'r+') as dataset:
+            # Iterate over all variables in the file
+            for var_name in dataset.variables:
+                # Skip dimensions and other non-variable attributes
+                if var_name not in dataset.dimensions:
+                    # Multiply the variable by 100
+                    dataset.variables[var_name][:] = dataset.variables[var_name][:] * value
+
+        print(f"Values in {file_path} have been multiplied by 100 and saved.")

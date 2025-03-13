@@ -7,7 +7,9 @@ from datetime import datetime
 from utility_functions import Utility
 from controller_server_path import PathManager
 from update_thredds import thredds
+import requests
 
+download_succeed, is_error = False, False
 
 def task_1():
     url= PathManager.get_url('ocean-api','task_download')
@@ -20,7 +22,9 @@ def task_1():
             #execute = True
             if task.id == 12 and execute:
                 print('Executing Task No.%s - %s' % (task.id, task.task_name))
+                fname = task.next_download_file
                 task.dataDownload()
+                task_3(download_succeed, fname,12)
             else:
                 print('nothing to do.')
 
@@ -37,7 +41,25 @@ def task_2():
           raise ValueError("Dataset Period not found.")
 
 
+def task_3(download_succeed,file_name,id):
+    root_dir = PathManager.get_url('root-dir')
+    api_url = PathManager.get_url('ocean-api',"dataset/"+str(id)+"/")
+    response = requests.get(api_url)
+    data = response.json()
+
+    api_path = data['local_directory_path']
+    new_text = api_path.replace("{root-dir}", "")
+    usable_path = "%s%s" % (root_dir,new_text)
+    if download_succeed:
+        orig_file = "%s/%s" % (usable_path, file_name)
+        print("Multiplying results...")
+        Utility.multiply_netcdf_values(orig_file,100)
+    else:
+        print("Skipping merging due to errors or failed download.")
+
 def cmems_nrt_daily_ssh():
     task_1()
-    task_2()
+    #task_2()
     return
+
+cmems_nrt_daily_ssh()

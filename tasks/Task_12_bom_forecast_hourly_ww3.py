@@ -18,7 +18,7 @@ def task_1():
             execute = Utility.time_diff(datetime.now(),datetime.strptime(task.next_run_time,"%Y-%m-%dT%H:%M:%SZ"))
             #REMOVE THIS IN PROD
             #execute = True
-            if task.id == 2 and execute:
+            if task.id == 1 and execute:
                 print('Executing Task No.%s - %s' % (task.id, task.task_name))
                 task.dataDownload()
             else:
