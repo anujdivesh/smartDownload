@@ -1,0 +1,5 @@
+{
+    "base_dir": "/home/pop/Desktop/pipeline/smart_data/tasks/code",
+    "datasets": "/home/pop/ocean_portal/datasets",
+    "ocean-api": "https://dev-oceanportal.spc.int/middleware/api"
+  }
