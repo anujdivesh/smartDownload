@@ -34,6 +34,7 @@ matplotlib==3.8.4
 motuclient==1.8.8
 multidict==6.1.0
 multiprocess==0.70.17
+nco==1.1.2
 nest-asyncio==1.6.0
 netCDF4==1.7.2
 numcodecs==0.13.1
