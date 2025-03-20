@@ -7,7 +7,7 @@ from datetime import datetime
 from utility_functions import Utility
 from controller_server_path import PathManager
 from update_thredds import thredds
-import requests
+
 
 def task_1():
     url= PathManager.get_url('ocean-api','task_download')
@@ -18,25 +18,14 @@ def task_1():
             execute = Utility.time_diff(datetime.now(),datetime.strptime(task.next_run_time,"%Y-%m-%dT%H:%M:%SZ"))
             #REMOVE THIS IN PROD
             #execute = True
-            if task.id == 7 and execute:
+            if task.id == 17 and execute:
                 print('Executing Task No.%s - %s' % (task.id, task.task_name))
                 task.dataDownload()
+            else:
+                print('nothing to do.')
 
 
 
-def task3():
-    url= PathManager.get_url('ocean-api','task_download')
-    tasks = initialize_taskController(url)
-    
-    for task in tasks:
-        if task.class_id == "calculate":
-            execute = Utility.time_diff(datetime.now(),datetime.strptime(task.next_run_time,"%Y-%m-%dT%H:%M:%SZ"))
-            if task.id == 20 and execute:
-                task.CalcOneMonthly(prelim=True,prelim_id=8,max_missing_days=3)
-
-
-
-def noaa_hindcast_daily_sst_anomalies():
+def cmems_hindcast_monthly_ph():
     task_1()
-    task3()
     return

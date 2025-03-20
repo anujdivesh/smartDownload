@@ -14,7 +14,8 @@ from copernicusmarine import subset
 from dateutil.relativedelta import relativedelta
 import calendar
 import numpy as np
-
+import glob
+from nco import Nco
 
 class taskController(task):
     def __init__(self, id, task_name, class_id, dataset_id,status,priority,\
@@ -497,10 +498,166 @@ class taskController(task):
         new_file_name,new_download_time = self.generate_next_download_filename(ds)
         print(new_file_name,new_download_time)
         #download_succeed, is_error = True, False
-        #Utility.update_tasks(download_succeed, is_error, new_file_name,new_download_time,self,ds)
+        Utility.update_tasks(download_succeed, is_error, new_file_name,new_download_time,self,ds)
         
         print('data download completed.')
         return download_succeed, is_error
+
+
+    def CalcOneMonthly(self,prelim=False,prelim_id=0,max_missing_days=5):
+        nco = Nco()
+        #GET DATASET
+        url= PathManager.get_url('ocean-api','dataset')
+        #dataset_url = "https://dev-oceanportal.spc.int/v1/api/dataset/%s" % (self.dataset_id)
+        dataset_url = "%s/%s" % (url,self.dataset_id)
+        ds = initialize_datasetController(dataset_url)
+
+        #CHECK IF FILE EXISTS AND DOWNLOAD
+        download_succeed, is_error = False, False
+        if prelim:
+            url= PathManager.get_url('ocean-api','task_download')
+            tasks = initialize_taskController(url)
+            prelim_task = []
+            for task in tasks:
+                if task.id == prelim_id:
+                    prelim_task = task
+            #GET PATH OF ORIG
+            path_to_scan = ds.local_directory_path
+            root_dir = PathManager.get_url('root-dir')
+            if "{root-dir}" in path_to_scan:
+                path_to_scan = path_to_scan.replace("{root-dir}", root_dir)
+
+            #GET PRELIM PATH
+            url= PathManager.get_url('ocean-api','dataset')
+            dataset_url = "%s/%s" % (url,prelim_task.dataset_id)
+            ds2 = initialize_datasetController(dataset_url)
+            path_to_scan_prelim = ds2.local_directory_path
+            root_dir = PathManager.get_url('root-dir')
+            if "{root-dir}" in path_to_scan_prelim:
+                path_to_scan_prelim = path_to_scan_prelim.replace("{root-dir}", root_dir)
+
+            #FILE TO DOWNLOAD
+            output_file_name = self.next_download_file
+            year_month = output_file_name[len(ds.download_file_prefix): -len(ds.download_file_suffix) if ds.download_file_suffix else None]
+
+            #LOOP TO GET
+            year = int(year_month[:4])
+            month = int(year_month[4:])
+
+            # Get the first and last day of the month
+            first_day = datetime(year, month, 1).date()
+            # Get the last day of the month using the monthrange method
+            last_day = datetime(year, month, 1).date().replace(day=28) + timedelta(days=4)  # this will give us a date in the next month
+            last_day = last_day - timedelta(days=last_day.day)
+            input_files = []
+            missing_days = []
+            # Loop through all the days in the month
+            current_day = first_day
+            while current_day <= last_day:
+                input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d") + ds.download_file_suffix)
+                if not os.path.exists(input_file):
+                    input_file = os.path.join(path_to_scan_prelim, ds2.download_file_prefix + current_day.strftime("%Y%m%d") + ds2.download_file_suffix)
+                if os.path.exists(input_file):
+                    input_files.append(input_file)
+                else:
+                    missing_days.append( current_day.strftime("%Y%m%d"))
+                current_day += timedelta(days=1)
+            new_out_path = path_to_scan_prelim.replace('daily', 'monthly')
+            if not os.path.exists(new_out_path):
+                os.makedirs(new_out_path)
+
+            if len(missing_days) < max_missing_days:
+                nco.ncra(input=input_files, output=new_out_path+"/"+output_file_name)
+                download_succeed = True
+                print('Monthly calculated successfully')
+            else:
+                print('Not enough files to calculate monthly')
+                download_succeed = False
+                is_error = True
+
+            #UPDATE API 
+            if download_succeed:
+                date_obj = datetime.strptime(year_month, "%Y%m")
+                new_date_obj = date_obj + relativedelta(months=1)
+                new_year_month = new_date_obj.strftime("%Y%m")
+                new_file_name = ds.download_file_prefix+new_year_month+ds.download_file_suffix
+                new_date_obj2 = date_obj + relativedelta(months=2)
+                new_date_obj2 -= timedelta(days=1)
+                Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj2,self,ds)
+        else:
+            #GET PATH OF ORIG
+            path_to_scan = ds.local_directory_path
+            root_dir = PathManager.get_url('root-dir')
+            if "{root-dir}" in path_to_scan:
+                path_to_scan = path_to_scan.replace("{root-dir}", root_dir)
+
+            #FILE TO DOWNLOAD
+            output_file_name = self.next_download_file
+            year_month_new = output_file_name[len(ds.download_file_prefix): -len(ds.download_file_suffix) if ds.download_file_suffix else None]
+            year_month = ""
+            if "_" in year_month_new:
+                year_month = year_month_new.split("_")[0]
+            else:
+                year_month = year_month_new
+
+            year = int(year_month[:4])
+            month = int(year_month[4:])
+            
+            # Get the first and last day of the month
+            first_day = datetime(year, month, 1).date()
+            # Get the last day of the month using the monthrange method
+            last_day = datetime(year, month, 1).date().replace(day=28) + timedelta(days=4)  # this will give us a date in the next month
+            last_day = last_day - timedelta(days=last_day.day)
+            input_files = []
+            missing_days = []
+            # Loop through all the days in the month
+            current_day = first_day
+            while current_day <= last_day:
+                if "_" in year_month_new:
+                    input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d")+"_"+current_day.strftime("%Y%m%d") + ds.download_file_suffix)
+                    
+                else:
+                    input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d") + ds.download_file_suffix)
+                if os.path.exists(input_file):
+                    nco.ncks(
+                        input=input_file,
+                        output=input_file,
+                        options=["--mk_rec_dmn", "time"]
+                    )
+                    input_files.append(input_file)
+                else:
+                    missing_days.append( current_day.strftime("%Y%m%d"))
+                current_day += timedelta(days=1)
+            
+            new_out_path = path_to_scan.replace('daily', 'monthly')
+
+            #CREATE NEW DIR
+            if not os.path.exists(new_out_path):
+                os.makedirs(new_out_path)
+
+            #EXECUTE
+            if len(missing_days) < max_missing_days:
+                nco.ncra(input=input_files, output=new_out_path+"/"+output_file_name)
+                download_succeed = True
+                print('Monthly calculated successfully')
+            else:
+                print('Not enough files to calculate monthly')
+                download_succeed = False
+                is_error = True
+
+            #UPDATE API 
+            if download_succeed:
+                date_obj = datetime.strptime(year_month, "%Y%m")
+                new_date_obj = date_obj + relativedelta(months=1)
+                new_year_month = new_date_obj.strftime("%Y%m")
+                new_file_name = ds.download_file_prefix+new_year_month+ds.download_file_suffix
+                if "_" in year_month_new:
+                    new_file_name = ds.download_file_prefix+new_year_month+"_"+new_year_month+ds.download_file_suffix
+                new_date_obj2 = date_obj + relativedelta(months=2)
+                new_date_obj2 -= timedelta(days=1)
+                Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj,self,ds)
+        return
+
 
 #LOAD VARIABLES FROM API INTO THE CLASS
 def initialize_taskController(url):

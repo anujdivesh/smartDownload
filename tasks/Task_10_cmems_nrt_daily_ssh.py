@@ -57,9 +57,22 @@ def task_3(download_succeed,file_name,id):
     else:
         print("Skipping merging due to errors or failed download.")
 
+def task_4():
+    url= PathManager.get_url('ocean-api','task_download')
+    tasks = initialize_taskController(url)
+    
+    for task in tasks:
+        if task.class_id == "calculate":
+            execute = Utility.time_diff(datetime.now(),datetime.strptime(task.next_run_time,"%Y-%m-%dT%H:%M:%SZ"))
+            if task.id == 21 and execute:
+                task.CalcOneMonthly(prelim=False,prelim_id=8,max_missing_days=5)
+
+
 def cmems_nrt_daily_ssh():
     task_1()
-    #task_2()
+    task_2()
+    task_3()
+    task_4()
     return
 
-cmems_nrt_daily_ssh()
+

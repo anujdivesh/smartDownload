@@ -1,5 +1,5 @@
 {
-  "base_dir": "/home/divesha/smartDownload/tasks/code",
-  "datasets": "/mnt/data/ocean_portal/datasets",
-  "ocean-api": "https://dev-oceanportal.spc.int/middleware/api"
+  "base_dir": "/home/pop/Desktop/pipeline/smart_data/tasks/code",
+  "datasets": "/home/pop/ocean_portal/datasets",
+  "ocean-api": "https://ocean-middleware.spc.int/middleware/api"
 }
