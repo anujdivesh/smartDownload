@@ -16,6 +16,8 @@ import calendar
 import numpy as np
 import glob
 from nco import Nco
+from bluelink import BlueLink
+import netCDF4 as nc
 
 class taskController(task):
     def __init__(self, id, task_name, class_id, dataset_id,status,priority,\
@@ -46,66 +48,71 @@ class taskController(task):
     def generate_next_download_filename(self,ds):
         new_file_name,new_download_time = "",""
         suffix = ds.download_file_suffix
-        if "{special}" in suffix:
-            print('Special file name generation...')
-            """
-            substrings_to_remove = [ds.download_file_prefix, ".nc"]
-            new_string = Utility.remove_substrings(self.next_download_file, substrings_to_remove)
-            seperate = new_string.split("_")
-            convert_to_datetime = datetime.strptime(seperate[0], ds.download_file_infix)
-            prepare_new_time = Utility.add_time(convert_to_datetime,ds.frequency_months,ds.frequency_days, ds.frequency_hours,ds.frequency_minutes)
-            first_date, second_date = Utility.special_filename_coral_bleaching(prepare_new_time)
-            new_file_name = ds.download_file_prefix+prepare_new_time.strftime('%Y%m%d')+"_for_"+first_date.strftime('%Y%m%d')+"to"+second_date.strftime('%Y%m%d')+".nc"
-            new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
-            """
-            print('Special file name generation...')
-            substrings_to_remove = [ds.download_file_prefix, ".nc"]
-            new_string = Utility.remove_substrings(self.next_download_file, substrings_to_remove)
-            seperate = new_string.split("_")
-            convert_to_datetime = datetime.strptime(seperate[0], ds.download_file_infix)
-            prepare_new_time = Utility.add_time(convert_to_datetime,0,7, 0,0)
-            second_date = prepare_new_time + timedelta(days=14)
-            thirddate = second_date + relativedelta(months=3)
-            last_sun = Utility.get_last_sunday(thirddate.year,thirddate.month)
-            new_file_name = ds.download_file_prefix+prepare_new_time.strftime('%Y%m%d')+"_for_"+second_date.strftime('%Y%m%d')+"to"+last_sun.strftime('%Y%m%d')+".nc"
+        if "{bluelink}" in suffix:
+            new_file_name = self.next_download_file
+            prepare_new_time = datetime.strptime(self.next_run_time, "%Y-%m-%dT%H:%M:%SZ")
             new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
         else:
-            if ds.download_file_infix.strip() == "none":
-                new_file_name = self.next_download_file
-                prepare_new_time = datetime.strptime(self.next_run_time, "%Y-%m-%dT%H:%M:%SZ")
-                new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
-
-            else:
-                substrings_to_remove = [ds.download_file_prefix, ds.download_file_suffix]
+            if "{special}" in suffix:
+                print('Special file name generation...')
+                """
+                substrings_to_remove = [ds.download_file_prefix, ".nc"]
                 new_string = Utility.remove_substrings(self.next_download_file, substrings_to_remove)
+                seperate = new_string.split("_")
+                convert_to_datetime = datetime.strptime(seperate[0], ds.download_file_infix)
+                prepare_new_time = Utility.add_time(convert_to_datetime,ds.frequency_months,ds.frequency_days, ds.frequency_hours,ds.frequency_minutes)
+                first_date, second_date = Utility.special_filename_coral_bleaching(prepare_new_time)
+                new_file_name = ds.download_file_prefix+prepare_new_time.strftime('%Y%m%d')+"_for_"+first_date.strftime('%Y%m%d')+"to"+second_date.strftime('%Y%m%d')+".nc"
+                new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
+                """
+                print('Special file name generation...')
+                substrings_to_remove = [ds.download_file_prefix, ".nc"]
+                new_string = Utility.remove_substrings(self.next_download_file, substrings_to_remove)
+                seperate = new_string.split("_")
+                convert_to_datetime = datetime.strptime(seperate[0], ds.download_file_infix)
+                prepare_new_time = Utility.add_time(convert_to_datetime,0,7, 0,0)
+                second_date = prepare_new_time + timedelta(days=14)
+                thirddate = second_date + relativedelta(months=3)
+                last_sun = Utility.get_last_sunday(thirddate.year,thirddate.month)
+                new_file_name = ds.download_file_prefix+prepare_new_time.strftime('%Y%m%d')+"_for_"+second_date.strftime('%Y%m%d')+"to"+last_sun.strftime('%Y%m%d')+".nc"
+                new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
+            else:
+                if ds.download_file_infix.strip() == "none":
+                    new_file_name = self.next_download_file
+                    prepare_new_time = datetime.strptime(self.next_run_time, "%Y-%m-%dT%H:%M:%SZ")
+                    new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
 
-                if "_" in new_string:
-                    print("extreme datetime")
-                    date_split = new_string.split('_')
-                    infix_split = ds.download_file_infix.split('_')
-                    convert_to_datetime = datetime.strptime(date_split[0], infix_split[0])
-                    prepare_new_time = Utility.add_time(convert_to_datetime,ds.frequency_months,ds.frequency_days, ds.frequency_hours,ds.frequency_minutes)
-                    
-                    if ds.download_method == 3:
-                        new_file_name = ds.download_file_prefix + "" +prepare_new_time.strftime(infix_split[0]) +"_"+prepare_new_time.strftime(infix_split[1])+ ds.download_file_suffix
-                        new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
-                    elif ds.download_method == 2: 
-                        first_day,last_day = Utility.get_first_last_day_of_month(prepare_new_time.year, prepare_new_time.month)
-                        new_file_name = ds.download_file_prefix + "" +first_day.strftime(infix_split[0]) +"_"+last_day.strftime(infix_split[1])+ ds.download_file_suffix
-                        new_download_time = Utility.add_time(first_day,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
+                else:
+                    substrings_to_remove = [ds.download_file_prefix, ds.download_file_suffix]
+                    new_string = Utility.remove_substrings(self.next_download_file, substrings_to_remove)
+
+                    if "_" in new_string:
+                        print("extreme datetime")
+                        date_split = new_string.split('_')
+                        infix_split = ds.download_file_infix.split('_')
+                        convert_to_datetime = datetime.strptime(date_split[0], infix_split[0])
+                        prepare_new_time = Utility.add_time(convert_to_datetime,ds.frequency_months,ds.frequency_days, ds.frequency_hours,ds.frequency_minutes)
+                        
+                        if ds.download_method == 3:
+                            new_file_name = ds.download_file_prefix + "" +prepare_new_time.strftime(infix_split[0]) +"_"+prepare_new_time.strftime(infix_split[1])+ ds.download_file_suffix
+                            new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
+                        elif ds.download_method == 2: 
+                            first_day,last_day = Utility.get_first_last_day_of_month(prepare_new_time.year, prepare_new_time.month)
+                            new_file_name = ds.download_file_prefix + "" +first_day.strftime(infix_split[0]) +"_"+last_day.strftime(infix_split[1])+ ds.download_file_suffix
+                            new_download_time = Utility.add_time(first_day,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
+                        else:
+                            convert_to_datetime = datetime.strptime(new_string, ds.download_file_infix)
+                            prepare_new_time = Utility.add_time(convert_to_datetime,ds.frequency_months,ds.frequency_days, ds.frequency_hours,ds.frequency_minutes)
+                            new_file_name = ds.download_file_prefix + "" +prepare_new_time.strftime(ds.download_file_infix) + ds.download_file_suffix
+                            new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
+
                     else:
+                        print("normal datetime")
                         convert_to_datetime = datetime.strptime(new_string, ds.download_file_infix)
                         prepare_new_time = Utility.add_time(convert_to_datetime,ds.frequency_months,ds.frequency_days, ds.frequency_hours,ds.frequency_minutes)
                         new_file_name = ds.download_file_prefix + "" +prepare_new_time.strftime(ds.download_file_infix) + ds.download_file_suffix
                         new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
-
-                else:
-                    print("normal datetime")
-                    convert_to_datetime = datetime.strptime(new_string, ds.download_file_infix)
-                    prepare_new_time = Utility.add_time(convert_to_datetime,ds.frequency_months,ds.frequency_days, ds.frequency_hours,ds.frequency_minutes)
-                    new_file_name = ds.download_file_prefix + "" +prepare_new_time.strftime(ds.download_file_infix) + ds.download_file_suffix
-                    new_download_time = Utility.add_time(prepare_new_time,ds.check_months,ds.check_days, ds.check_hours,ds.check_minutes)
-            
+                
         return new_file_name,new_download_time
 
     #CORAL BLEACHING HAS ISSUES SOMETIMES 
@@ -133,6 +140,37 @@ class taskController(task):
         if not os.path.exists(local_dir):
             os.makedirs(local_dir)
         pass
+
+    def download_bluelink(self,ds):
+        download_complete = False
+        is_error = False
+        try:
+            #GET URL
+            url = ds.data_download_url
+            if "{blue_link_download}" in url:
+                url = url.replace('{blue_link_download}', '')
+            tmp_out_dir = PathManager.get_url('tmp','')
+            BlueLink.Download_Compile_Bluelink_Currents(tmp_out_dir, url)
+            
+            #MOVE FILES TO LOCAL OR SCP
+            local_dir = ds.local_directory_path
+            if ds.download_to_local_dir:
+                root_dir = PathManager.get_url('root-dir')
+                if "{root-dir}" in local_dir:
+                    local_dir = local_dir.replace("{root-dir}", root_dir)
+                print(local_dir)
+                Utility.copy_file(PathManager.get_url('tmp',self.next_download_file), local_dir)
+                Utility.remove_file(PathManager.get_url('tmp',self.next_download_file))
+                Utility.remove_file(PathManager.get_url('tmp','Bluelink_currents_tmp.nc'))
+            
+
+            #SET STAUS
+            download_complete = True
+        except Exception as e:
+            print(e)
+            is_error = True
+        return download_complete, is_error
+
 
     def download_http(self,ds):
         download_complete = False
@@ -166,6 +204,16 @@ class taskController(task):
             if Utility.url_exists(url):
                 #DOWNLOAD THE FILE
                 Utility.download_large_file(url,PathManager.get_url('tmp',self.next_download_file))
+
+                if self.id == 10:
+                    tmp_name2 = "%s%s" % (PathManager.get_url('tmp',self.next_download_file), "_climate.nc")
+                    Utility.rename_file(PathManager.get_url('tmp',self.next_download_file), tmp_name2)
+                    new_opath = PathManager.get_url('tmp',self.next_download_file)
+                    print(tmp_name2)
+                    print(new_opath)
+                    self.addClimatology(tmp_name2,new_opath)
+                    Utility.remove_file(tmp_name2)
+                    print('adding climatalogy')
                 
                 #RENAME TO TMP IN THE SAME DIR
                 tmp_name = "%s%s" % (PathManager.get_url('tmp',self.next_download_file), "_tmp.nc")
@@ -491,12 +539,14 @@ class taskController(task):
         elif ds.download_method == 3:
             print('downloading with copernicusmarine..')
             download_succeed, is_error = self.download_copernicusmarine(ds)
+        elif ds.download_method == 4:
+            print('downloading with bluelink..')
+            download_succeed, is_error = self.download_bluelink(ds)
         else:
             print('nothing to download.')
         
         #COMPULSORY THINGS TO DO, UPDATE THE API
         new_file_name,new_download_time = self.generate_next_download_filename(ds)
-        print(new_file_name,new_download_time)
         #download_succeed, is_error = True, False
         Utility.update_tasks(download_succeed, is_error, new_file_name,new_download_time,self,ds)
         
@@ -565,7 +615,7 @@ class taskController(task):
             new_out_path = path_to_scan_prelim.replace('daily', 'monthly')
             if not os.path.exists(new_out_path):
                 os.makedirs(new_out_path)
-
+            new_out_path = path_to_scan_prelim.replace('nrt', 'hindcast')
             if len(missing_days) < max_missing_days:
                 nco.ncra(input=input_files, output=new_out_path+"/"+output_file_name)
                 download_succeed = True
@@ -657,6 +707,366 @@ class taskController(task):
                 new_date_obj2 -= timedelta(days=1)
                 Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj,self,ds)
         return
+
+    def Calc3Monthly(self,prelim=False,prelim_id=0,max_missing_days=5):
+        nco = Nco()
+        #GET DATASET
+        url= PathManager.get_url('ocean-api','dataset')
+        #dataset_url = "https://dev-oceanportal.spc.int/v1/api/dataset/%s" % (self.dataset_id)
+        dataset_url = "%s/%s" % (url,self.dataset_id)
+        ds = initialize_datasetController(dataset_url)
+
+        #CHECK IF FILE EXISTS AND DOWNLOAD
+        download_succeed, is_error = False, False
+        if prelim:
+            url= PathManager.get_url('ocean-api','task_download')
+            tasks = initialize_taskController(url)
+            prelim_task = []
+            for task in tasks:
+                if task.id == prelim_id:
+                    prelim_task = task
+            #GET PATH OF ORIG
+            path_to_scan = ds.local_directory_path
+            root_dir = PathManager.get_url('root-dir')
+            if "{root-dir}" in path_to_scan:
+                path_to_scan = path_to_scan.replace("{root-dir}", root_dir)
+
+            #GET PRELIM PATH
+            url= PathManager.get_url('ocean-api','dataset')
+            dataset_url = "%s/%s" % (url,prelim_task.dataset_id)
+            ds2 = initialize_datasetController(dataset_url)
+            path_to_scan_prelim = ds2.local_directory_path
+            root_dir = PathManager.get_url('root-dir')
+            if "{root-dir}" in path_to_scan_prelim:
+                path_to_scan_prelim = path_to_scan_prelim.replace("{root-dir}", root_dir)
+
+            #FILE TO DOWNLOAD
+            output_file_name = self.next_download_file
+            year_month = output_file_name[len(ds.download_file_prefix): -len(ds.download_file_suffix) if ds.download_file_suffix else None]
+            datesplit = year_month.split("_")
+            first_month = datesplit[0]
+            last_month = datesplit[1]
+            first_year = int(first_month[:4])
+            first_month = int(first_month[4:])
+            last_year = int(last_month[:4])
+            last_month = int(last_month[4:])
+
+            first_day = datetime(first_year, first_month, 1).date()
+            last_day = datetime(last_year, last_month, 1).date().replace(day=28) + timedelta(days=4)  # this will give us a date in the next month
+            last_day = last_day - timedelta(days=last_day.day)
+            
+
+            input_files = []
+            missing_days = []
+            # Loop through all the days in the month
+            current_day = first_day
+            while current_day <= last_day:
+                input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d") + ds.download_file_suffix)
+                if not os.path.exists(input_file):
+                    input_file = os.path.join(path_to_scan_prelim, ds2.download_file_prefix + current_day.strftime("%Y%m%d") + ds2.download_file_suffix)
+                if os.path.exists(input_file):
+                    input_files.append(input_file)
+                else:
+                    missing_days.append( current_day.strftime("%Y%m%d"))
+                current_day += timedelta(days=1)
+            new_out_path2 = path_to_scan_prelim.replace('daily', '3monthly')
+            new_out_path = new_out_path2.replace('nrt', 'hindcast')
+            if not os.path.exists(new_out_path):
+                os.makedirs(new_out_path)
+            if len(missing_days) < max_missing_days:
+                nco.ncra(input=input_files, output=new_out_path+"/"+output_file_name)
+                download_succeed = True
+                print('Monthly calculated successfully')
+            else:
+                print('Not enough files to calculate monthly, total missing: '+str(len(missing_days)))
+                download_succeed = False
+                is_error = True
+
+            #UPDATE API 
+            if download_succeed:
+                firstdate_obj = datetime.strptime(datesplit[0], "%Y%m")
+                first_new_date_obj = firstdate_obj + relativedelta(months=1)
+                firstnew_year_month = first_new_date_obj.strftime("%Y%m")
+
+                last_date_obj = datetime.strptime(datesplit[1], "%Y%m")
+                last_new_date_obj = last_date_obj + relativedelta(months=1)
+                last_new_year_month = last_new_date_obj.strftime("%Y%m")
+
+                new_file_name = ds.download_file_prefix+firstnew_year_month+"_"+last_new_year_month+ds.download_file_suffix
+                new_date_obj2 = last_date_obj + relativedelta(months=2)
+                new_date_obj2 -= timedelta(days=1)
+                Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj2,self,ds)
+        else:
+            #GET PATH OF ORIG
+            path_to_scan = ds.local_directory_path
+            root_dir = PathManager.get_url('root-dir')
+            if "{root-dir}" in path_to_scan:
+                path_to_scan = path_to_scan.replace("{root-dir}", root_dir)
+
+            #FILE TO DOWNLOAD
+            output_file_name = self.next_download_file
+            year_month_new = output_file_name[len(ds.download_file_prefix): -len(ds.download_file_suffix) if ds.download_file_suffix else None]
+            year_month = ""
+            if "_" in year_month_new:
+                year_month = year_month_new.split("_")[0]
+            else:
+                year_month = year_month_new
+
+            year = int(year_month[:4])
+            month = int(year_month[4:])
+            
+            # Get the first and last day of the month
+            first_day = datetime(year, month, 1).date()
+            # Get the last day of the month using the monthrange method
+            last_day = datetime(year, month, 1).date().replace(day=28) + timedelta(days=4)  # this will give us a date in the next month
+            last_day = last_day - timedelta(days=last_day.day)
+            input_files = []
+            missing_days = []
+            # Loop through all the days in the month
+            current_day = first_day
+            while current_day <= last_day:
+                if "_" in year_month_new:
+                    input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d")+"_"+current_day.strftime("%Y%m%d") + ds.download_file_suffix)
+                    
+                else:
+                    input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d") + ds.download_file_suffix)
+                if os.path.exists(input_file):
+                    nco.ncks(
+                        input=input_file,
+                        output=input_file,
+                        options=["--mk_rec_dmn", "time"]
+                    )
+                    input_files.append(input_file)
+                else:
+                    missing_days.append( current_day.strftime("%Y%m%d"))
+                current_day += timedelta(days=1)
+            
+            new_out_path = path_to_scan.replace('daily', 'monthly')
+
+            #CREATE NEW DIR
+            if not os.path.exists(new_out_path):
+                os.makedirs(new_out_path)
+
+            #EXECUTE
+            if len(missing_days) < max_missing_days:
+                nco.ncra(input=input_files, output=new_out_path+"/"+output_file_name)
+                download_succeed = True
+                print('Monthly calculated successfully')
+            else:
+                print('Not enough files to calculate monthly')
+                download_succeed = False
+                is_error = True
+
+            #UPDATE API 
+            if download_succeed:
+                date_obj = datetime.strptime(year_month, "%Y%m")
+                new_date_obj = date_obj + relativedelta(months=1)
+                new_year_month = new_date_obj.strftime("%Y%m")
+                new_file_name = ds.download_file_prefix+new_year_month+ds.download_file_suffix
+                if "_" in year_month_new:
+                    new_file_name = ds.download_file_prefix+new_year_month+"_"+new_year_month+ds.download_file_suffix
+                new_date_obj2 = date_obj + relativedelta(months=2)
+                new_date_obj2 -= timedelta(days=1)
+                Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj,self,ds)
+        return
+    
+    def addClimatology(self,orig_file,output_file):
+        root_dir = PathManager.get_url('root-dir')
+        cli_suffix = "/model/regional/noaa/climatology/"
+        cli_path = root_dir+cli_suffix
+
+        with nc.Dataset(orig_file, "r") as ds_anom:
+            sst_anom = ds_anom.variables['sst'][:]
+            lat = ds_anom.variables['lat'][:]
+            lon = ds_anom.variables['lon'][:]
+            time = ds_anom.variables['time'][:]
+            
+            lon_grid, lat_grid = np.meshgrid(lon, lat)
+            epoch = datetime(1970, 1, 1)
+            
+            for t in range(sst_anom.shape[0]):
+                try:
+                    time_step = epoch + timedelta(int(time[t]))
+                    month = time_step.month
+                    year = time_step.year
+                    
+                    # Load climatology
+                    clim_file = f"{cli_path}clim-oisst-avhrr-sst-v02r01_1982-2018.{month:02d}.nc"
+                    with nc.Dataset(clim_file) as ds_clim:
+                        sst_clim = ds_clim.variables['sst'][0, 0, :, :]
+                    
+                    # Calculate total SST
+                    sst_total = sst_anom[t, :, :] + sst_clim
+                    
+                    # Create exact 29°C contour masks (with tolerance for floating point comparison)
+                    tolerance = 0.1  # Degrees C tolerance for identifying 29°C contour
+                    current_contour = np.where(np.abs(sst_total - 29) <= tolerance, 1, 0).astype('i1')
+                    clim_contour = np.where(np.abs(sst_clim - 29) <= tolerance, 1, 0).astype('i1')
+                    
+                    # Save to NetCDF with proper attributes
+                    #output_file = f"{output_path}sst_climatology_combined.nc"
+                    with nc.Dataset(output_file, 'w', format='NETCDF4') as ds_out:
+                        ds_out.createDimension('lat', len(lat))
+                        ds_out.createDimension('lon', len(lon))
+                        
+                        # Coordinate variables
+                        v_lat = ds_out.createVariable('lat', 'f4', ('lat',))
+                        v_lon = ds_out.createVariable('lon', 'f4', ('lon',))
+                        
+                        # Data variables
+                        v_sst = ds_out.createVariable('sst_total', 'f4', ('lat', 'lon'), zlib=True)
+                        v_clim = ds_out.createVariable('sst_clim', 'f4', ('lat', 'lon'), zlib=True)
+                        v_current_contour = ds_out.createVariable('current_29C', 'i1', ('lat', 'lon'), zlib=True)
+                        v_clim_contour = ds_out.createVariable('clim_29C', 'i1', ('lat', 'lon'), zlib=True)
+                        
+                        # Add attributes
+                        v_lat.units = "degrees_north"
+                        v_lat.long_name = "Latitude"
+                        v_lon.units = "degrees_east"
+                        v_lon.long_name = "Longitude"
+                        v_sst.units = "°C"
+                        v_sst.long_name = "Total Sea Surface Temperature"
+                        v_clim.units = "°C"
+                        v_clim.long_name = "Climatology Sea Surface Temperature"
+                        v_current_contour.units = "1 (SST = 29±0.1°C), 0 otherwise"
+                        v_current_contour.long_name = "Current SST 29°C Exact Contour Mask"
+                        v_clim_contour.units = "1 (Climatology SST = 29±0.1°C), 0 otherwise"
+                        v_clim_contour.long_name = "Climatology SST 29°C Exact Contour Mask"
+                        
+                        # Assign data
+                        v_lat[:] = lat
+                        v_lon[:] = lon
+                        v_sst[:] = sst_total
+                        v_clim[:] = sst_clim
+                        v_current_contour[:] = current_contour
+                        v_clim_contour[:] = clim_contour
+                    
+                except Exception as e:
+                    print('Error occured'+e)
+                    continue
+
+    def CalcDecile(self):
+        url= PathManager.get_url('ocean-api','dataset')
+        #dataset_url = "https://dev-oceanportal.spc.int/v1/api/dataset/%s" % (self.dataset_id)
+        dataset_url = "%s/%s" % (url,self.dataset_id)
+        dset = initialize_datasetController(dataset_url)
+        path_to_scan = dset.local_directory_path
+        root_dir = PathManager.get_url('root-dir')
+        if "{root-dir}" in path_to_scan:
+            path_to_scan = path_to_scan.replace("{root-dir}", root_dir)
+        
+        path_to_scan2 = path_to_scan.replace("daily", "monthly")
+        input_path = path_to_scan2.replace("nrt", "hindcast")
+        out_path = path_to_scan2.replace("monthly", "decile")
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+        
+        download_succeed, is_error = False, False
+        output_file_name = self.next_download_file
+        year_monthtmp = output_file_name[len(dset.download_file_prefix): -len(dset.download_file_suffix) if dset.download_file_suffix else None]
+        year_month = year_monthtmp.replace('decile.', '')
+
+        year = int(year_month[:4])
+        month = int(year_month[4:])
+
+        files = sorted(glob.glob(os.path.join(input_path, "*.nc")))
+
+        variable_name = "sst"  
+        
+        # Filter files to prioritize final over preliminary
+        final_files = []
+        preliminary_files = []
+
+        for file in files:
+            if '_preliminary.nc' in file:
+                preliminary_files.append(file)
+            else:
+                final_files.append(file)
+
+        # Create a dictionary to map base names to final files
+        final_file_dict = {os.path.basename(file).replace('_preliminary.nc', '.nc'): file for file in final_files}
+
+        # Select files, preferring final over preliminary
+        selected_files = []
+        for file in files:
+            base_name = os.path.basename(file)
+            if base_name in final_file_dict:
+                selected_files.append(final_file_dict[base_name])
+            elif '_preliminary.nc' not in file:
+                selected_files.append(file)
+
+        # Remove duplicates by converting to a set and back to a list
+        selected_files = list(set(selected_files))
+        selected_files.sort()
+        if not selected_files:
+            raise ValueError("No valid NetCDF files found in the input directory.")
+
+        # Read data and stack into a 3D array (time, lat, lon)
+        data_list = []
+        time_list = []
+        for file in selected_files:
+            with nc.Dataset(file, "r") as ds:
+                data = ds.variables[variable_name][:]  # Read variable
+                data = np.squeeze(data)  # Remove single-length dimensions
+                time = nc.num2date(ds.variables['time'][:], ds.variables['time'].units)  # Convert time
+                data_list.append(data)
+                time_list.append(time)
+
+        # Convert list to 3D numpy array
+        data_array = np.ma.array(data_list)  # (time, lat, lon)
+        time_array = np.array(time_list).flatten()
+
+        # Filter for the chosen month across all years
+        month_indices = [i for i, t in enumerate(time_array) if t.month == month]
+        month_data = data_array[month_indices, :, :]
+
+        # Compute deciles (percentiles 10, 20, ..., 90)
+        percentiles = [10 * i for i in range(1, 10)]
+        deciles = np.percentile(month_data, percentiles, axis=0)
+
+        # Get the latest SST for the chosen month and year
+        latest_sst = data_array[[i for i, t in enumerate(time_array) if t.year == year and t.month == month], :, :][-1, :, :]
+
+        # Classify the latest SST into decile categories
+        category_map = np.zeros_like(latest_sst, dtype=int)
+        category_map[latest_sst <= deciles[0]] = 1  # Lowest on record
+        category_map[(latest_sst > deciles[0]) & (latest_sst <= deciles[1])] = 2  # Very much below average
+        category_map[(latest_sst > deciles[1]) & (latest_sst <= deciles[2])] = 3  # Below average
+        category_map[(latest_sst > deciles[2]) & (latest_sst <= deciles[6])] = 5  # Average
+        category_map[(latest_sst > deciles[6]) & (latest_sst <= deciles[7])] = 8  # Above average
+        category_map[(latest_sst > deciles[7]) & (latest_sst <= deciles[8])] = 10  # Very much above average
+        category_map[latest_sst > deciles[8]] = 11  # Highest on record
+
+        # Save deciles to a new NetCDF file
+        month_name = time_array[month_indices[-1]].strftime("%B").lower()  # Get month name (e.g., "february")
+        output_file = os.path.join(out_path, output_file_name)
+        with nc.Dataset(output_file, "w", format="NETCDF4") as ds_out:
+            with nc.Dataset(selected_files[0], "r") as ds_ref:
+                # Copy dimensions from the reference file
+                for dim_name, dim_obj in ds_ref.dimensions.items():
+                    ds_out.createDimension(dim_name, len(dim_obj))
+
+                # Copy latitude & longitude variables while ds_ref is still open
+                for var_name in ["lat", "lon"]:
+                    var_ref = ds_ref.variables[var_name]
+                    var_out = ds_out.createVariable(var_name, var_ref.datatype, var_ref.dimensions)
+                    var_out[:] = var_ref[:]  # Copy data
+
+            # Save category map
+            category_var = ds_out.createVariable("sst_category", "i4", ("lat", "lon"))
+            category_var[:] = category_map
+        
+        print('Decile computed successfully.')
+        download_succeed = True
+        if download_succeed:
+            date_obj = datetime.strptime(year_month, "%Y%m")
+            new_date_obj = date_obj + relativedelta(months=1)
+            new_year_month = new_date_obj.strftime("%Y%m")
+            new_file_name = dset.download_file_prefix+"decile."+new_year_month+dset.download_file_suffix
+            new_date_obj2 = date_obj + relativedelta(months=2)
+            new_date_obj2 -= timedelta(days=1)
+            Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj2,self,ds)
+        #print(year,month)
 
 
 #LOAD VARIABLES FROM API INTO THE CLASS
