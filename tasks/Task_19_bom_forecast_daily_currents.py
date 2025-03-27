@@ -29,5 +29,3 @@ def task_1():
 def bom_forecast_daily_currents():
     task_1()
     return
-
-bom_forecast_daily_currents()

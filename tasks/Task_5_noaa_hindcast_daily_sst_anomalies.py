@@ -52,11 +52,12 @@ def task5():
             execute = Utility.time_diff(datetime.now(),datetime.strptime(task.next_run_time,"%Y-%m-%dT%H:%M:%SZ"))
             if task.id == 24 and execute:
                 task.CalcDecile()
-task5()
+
 
 
 def noaa_hindcast_daily_sst_anomalies():
     task_1()
     task3()
     task4()
+    task5()
     return

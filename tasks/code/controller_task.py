@@ -755,7 +755,6 @@ class taskController(task):
             last_day = datetime(last_year, last_month, 1).date().replace(day=28) + timedelta(days=4)  # this will give us a date in the next month
             last_day = last_day - timedelta(days=last_day.day)
             
-
             input_files = []
             missing_days = []
             # Loop through all the days in the month
