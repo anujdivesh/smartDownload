@@ -612,10 +612,10 @@ class taskController(task):
                 else:
                     missing_days.append( current_day.strftime("%Y%m%d"))
                 current_day += timedelta(days=1)
-            new_out_path = path_to_scan_prelim.replace('daily', 'monthly')
+            new_out_path2 = path_to_scan_prelim.replace('daily', 'monthly')
+            new_out_path = new_out_path2.replace('nrt', 'hindcast')
             if not os.path.exists(new_out_path):
                 os.makedirs(new_out_path)
-            new_out_path = path_to_scan_prelim.replace('nrt', 'hindcast')
             if len(missing_days) < max_missing_days:
                 nco.ncra(input=input_files, output=new_out_path+"/"+output_file_name)
                 download_succeed = True
