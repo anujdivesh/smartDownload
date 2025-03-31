@@ -869,6 +869,89 @@ class taskController(task):
                 Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj,self,ds)
         return
     
+
+    def addClimatology(self, orig_file, output_file):
+        root_dir = PathManager.get_url('root-dir')
+        cli_suffix = "/model/regional/noaa/climatology/"
+        cli_path = root_dir + cli_suffix
+
+        with nc.Dataset(orig_file, "r") as ds_anom:
+            sst_anom = ds_anom.variables['sst'][:]
+            lat = ds_anom.variables['lat'][:]
+            lon = ds_anom.variables['lon'][:]
+            time = ds_anom.variables['time'][:]
+            
+            lon_grid, lat_grid = np.meshgrid(lon, lat)
+            epoch = datetime(1970, 1, 1)
+            
+            # Create output file outside the time loop
+            with nc.Dataset(output_file, 'w', format='NETCDF4') as ds_out:
+                # Create dimensions - add time first
+                ds_out.createDimension('time', None)  # Unlimited dimension
+                ds_out.createDimension('lat', len(lat))
+                ds_out.createDimension('lon', len(lon))
+                
+                # Coordinate variables - add time variable
+                v_time = ds_out.createVariable('time', 'f4', ('time',))
+                v_lat = ds_out.createVariable('lat', 'f4', ('lat',))
+                v_lon = ds_out.createVariable('lon', 'f4', ('lon',))
+                
+                # Data variables - add time dimension to all variables
+                v_sst = ds_out.createVariable('sst_total', 'f4', ('time', 'lat', 'lon'), zlib=True)
+                v_clim = ds_out.createVariable('sst_clim', 'f4', ('time', 'lat', 'lon'), zlib=True)
+                v_current_contour = ds_out.createVariable('current_29C', 'i1', ('time', 'lat', 'lon'), zlib=True)
+                v_clim_contour = ds_out.createVariable('clim_29C', 'i1', ('time', 'lat', 'lon'), zlib=True)
+                
+                # Add attributes
+                v_time.units = "days since 1970-01-01"  # Match your input time units
+                v_time.long_name = "Time"
+                v_lat.units = "degrees_north"
+                v_lat.long_name = "Latitude"
+                v_lon.units = "degrees_east"
+                v_lon.long_name = "Longitude"
+                v_sst.units = "°C"
+                v_sst.long_name = "Total Sea Surface Temperature"
+                v_clim.units = "°C"
+                v_clim.long_name = "Climatology Sea Surface Temperature"
+                v_current_contour.units = "1 (SST = 29±0.1°C), 0 otherwise"
+                v_current_contour.long_name = "Current SST 29°C Exact Contour Mask"
+                v_clim_contour.units = "1 (Climatology SST = 29±0.1°C), 0 otherwise"
+                v_clim_contour.long_name = "Climatology SST 29°C Exact Contour Mask"
+                
+                # Assign coordinate data
+                v_lat[:] = lat
+                v_lon[:] = lon
+                
+                for t in range(sst_anom.shape[0]):
+                    try:
+                        time_step = epoch + timedelta(int(time[t]))
+                        month = time_step.month
+                        year = time_step.year
+                        
+                        # Load climatology
+                        clim_file = f"{cli_path}clim-oisst-avhrr-sst-v02r01_1982-2018.{month:02d}.nc"
+                        with nc.Dataset(clim_file) as ds_clim:
+                            sst_clim = ds_clim.variables['sst'][0, 0, :, :]
+                        
+                        # Calculate total SST
+                        sst_total = sst_anom[t, :, :] + sst_clim
+                        
+                        # Create exact 29°C contour masks
+                        tolerance = 0.1
+                        current_contour = np.where(np.abs(sst_total - 29) <= tolerance, 1, 0).astype('i1')
+                        clim_contour = np.where(np.abs(sst_clim - 29) <= tolerance, 1, 0).astype('i1')
+                        
+                        # Write data for this time step
+                        v_time[t] = time[t]  # Copy time value from input
+                        v_sst[t, :, :] = sst_total
+                        v_clim[t, :, :] = sst_clim
+                        v_current_contour[t, :, :] = current_contour
+                        v_clim_contour[t, :, :] = clim_contour
+                        
+                    except Exception as e:
+                        print(f'Error occurred at time step {t}: {str(e)}')
+                        continue
+    """
     def addClimatology(self,orig_file,output_file):
         root_dir = PathManager.get_url('root-dir')
         cli_suffix = "/model/regional/noaa/climatology/"
@@ -943,7 +1026,7 @@ class taskController(task):
                 except Exception as e:
                     print('Error occured'+e)
                     continue
-
+    """
     def CalcDecile(self):
         url= PathManager.get_url('ocean-api','dataset')
         #dataset_url = "https://dev-oceanportal.spc.int/v1/api/dataset/%s" % (self.dataset_id)

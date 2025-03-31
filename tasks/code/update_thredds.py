@@ -129,9 +129,9 @@ class thredds:
 
     @staticmethod
     def get_specific_stamp_bureau(data):
-        wms = WebMapService(data['url'], version="1.3.0")
-        layer = data['layer_name']
-        time = wms[layer].dimensions['time']['values']
+        #wms = WebMapService(data['url'], version="1.3.0")
+        #layer = data['layer_name']
+        #time = wms[layer].dimensions['time']['values']
         url = data['url']
         new_text = url.replace("wms", "dodsC")
         ds = xr.open_dataset(new_text)
