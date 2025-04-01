@@ -679,8 +679,8 @@ class taskController(task):
                     missing_days.append( current_day.strftime("%Y%m%d"))
                 current_day += timedelta(days=1)
             
-            new_out_path = path_to_scan.replace('daily', 'monthly')
-
+            new_out_path2 = path_to_scan.replace('daily', 'monthly')
+            new_out_path = new_out_path2.replace('nrt', 'hindcast')
             #CREATE NEW DIR
             if not os.path.exists(new_out_path):
                 os.makedirs(new_out_path)

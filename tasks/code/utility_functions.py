@@ -480,20 +480,24 @@ class Utility:
             print("Error: Failed to generate a new token.")
             return None
     @staticmethod
-    def multiply_netcdf_values(file_path,value):
-        """
-        Multiply all variables in a NetCDF file by 100 and save the result back to the same file.
-
-        Args:
-            file_path (str): Path to the NetCDF file.
-        """
-        # Open the NetCDF file in append mode to modify it
-        with nc.Dataset(file_path, 'r+') as dataset:
-            # Iterate over all variables in the file
-            for var_name in dataset.variables:
-                # Skip dimensions and other non-variable attributes
-                if var_name not in dataset.dimensions:
-                    # Multiply the variable by 100
-                    dataset.variables[var_name][:] = dataset.variables[var_name][:] * value
-
-        print(f"Values in {file_path} have been multiplied by 100 and saved.")
+    def multiply_netcdf_values(file_path, value):
+        """Multiply numeric variables and save safely using a temporary file."""
+        temp_path = file_path + ".tmp"
+        
+        try:
+            with xr.open_dataset(file_path) as ds:
+                for var_name in ds.variables:
+                    if var_name not in ds.dims and ds[var_name].dtype.kind in ['f', 'i', 'u']:
+                        ds[var_name] = ds[var_name] * value
+                
+                # Write to temporary file first
+                ds.to_netcdf(temp_path, mode='w')
+            
+            # Replace original file with the temporary one
+            os.replace(temp_path, file_path)
+            print(f"Values multiplied by {value} and saved to {file_path}.")
+        
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)  # Clean up temp file on error
+            raise e

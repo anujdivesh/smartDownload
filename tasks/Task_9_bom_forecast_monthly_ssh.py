@@ -9,7 +9,7 @@ from controller_server_path import PathManager
 from update_thredds import thredds
 import requests
 
-download_succeed, is_error = False, False
+download_succeed, is_error = True, False
 
 def task_1():
     url= PathManager.get_url('ocean-api','task_download')
@@ -38,7 +38,7 @@ def task_3(download_succeed,file_name,id):
     new_text = api_path.replace("{root-dir}", "")
     usable_path = "%s%s" % (root_dir,new_text)
     if download_succeed:
-        orig_file = "%s/%s" % (usable_path, file_name)
+        orig_file = "%s/%s" % (usable_path, 'latest.nc')
         print("Multiplying results...")
         Utility.multiply_netcdf_values(orig_file,1000)
     else:
@@ -62,4 +62,3 @@ def bom_forecast_monthly_ssh():
     task_1()
     task_2()
     return
-bom_forecast_monthly_ssh()

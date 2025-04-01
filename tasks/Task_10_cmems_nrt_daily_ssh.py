@@ -9,7 +9,7 @@ from controller_server_path import PathManager
 from update_thredds import thredds
 import requests
 
-download_succeed, is_error = False, False
+download_succeed, is_error = True, False
 
 def task_1():
     url= PathManager.get_url('ocean-api','task_download')
@@ -65,7 +65,7 @@ def task_4():
         if task.class_id == "calculate":
             execute = Utility.time_diff(datetime.now(),datetime.strptime(task.next_run_time,"%Y-%m-%dT%H:%M:%SZ"))
             if task.id == 21 and execute:
-                task.CalcOneMonthly(prelim=False,prelim_id=8,max_missing_days=5)
+                task.CalcOneMonthly(prelim=False,prelim_id=8,max_missing_days=50)
 
 
 def cmems_nrt_daily_ssh():
