@@ -53,7 +53,7 @@ def task_3(download_succeed,file_name,id):
     if download_succeed:
         orig_file = "%s/%s" % (usable_path, file_name)
         print("Multiplying results...")
-        Utility.multiply_netcdf_values(orig_file,100)
+        Utility.multiply_netcdf_values(orig_file,1000)
     else:
         print("Skipping merging due to errors or failed download.")
 
