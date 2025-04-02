@@ -65,7 +65,7 @@ def task_4():
         if task.class_id == "calculate":
             execute = Utility.time_diff(datetime.now(),datetime.strptime(task.next_run_time,"%Y-%m-%dT%H:%M:%SZ"))
             if task.id == 21 and execute:
-                task.CalcOneMonthly(prelim=False,prelim_id=8,max_missing_days=50)
+                task.CalcOneMonthly(prelim=False,prelim_id=8,max_missing_days=5)
 
 
 def cmems_nrt_daily_ssh():
