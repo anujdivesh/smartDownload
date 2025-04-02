@@ -24,8 +24,20 @@ def task_1():
             else:
                 print('nothing to do.')
 
+def task_2():
+    layer_id = [30]
 
+    for id in layer_id:
+        api_url = PathManager.get_url('ocean-api',"layer_web_map/"+str(id)+"/")
+        
+        api_response = thredds.get_data_from_api(api_url)
+        if api_response['period'] == "COMMA":
+            thredds.get_specific(api_response)
+        else:
+            raise ValueError("Dataset Period not found.")
 
 def noaa_nrt_daily_mhw():
     task_1()
+    task_2()
     return
+

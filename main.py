@@ -28,6 +28,8 @@ from Task_15_cmems_hindcast_monthly_phytoplankton import cmems_hindcast_daily_ph
 from Task_16_cmems_forecast_daily_ph import cmems_forecast_daily_ph as Task16
 from Task_17_cmems_hindcast_monthly_ph import cmems_hindcast_monthly_ph as Task17
 from Task_18_noaa_nrt_daily_mhw import noaa_nrt_daily_mhw as Task18
+from multiprocessing import Queue, Process, JoinableQueue
+import os
 
 if __name__ == "__main__":
     # List of functions to execute
@@ -35,47 +37,48 @@ if __name__ == "__main__":
                  Task13, Task14,Task15,Task16, Task17,Task18]
 
     # Create a task queue and a result queue
-    task_queue = multiprocessing.JoinableQueue()
-    result_queue = multiprocessing.Queue()
+    task_queue = JoinableQueue()
+    result_queue = Queue()
 
-    # Add all functions to the task queue
+    # Add tasks to queue
     for func in functions:
         task_queue.put(func)
-        print(f"Added {func.__name__} to the task queue")
+        print(f"📥 Added {func.__name__} to the queue")
 
-    # Verify the queue is populated
-    print(f"Task queue size: {task_queue.qsize()}")
-
-    # Create a list to hold active processes
+    # Start workers
     processes = []
+    try:
+        while not task_queue.empty():
+            free_cpus = TaskScheduler.get_available_cpus(utilization_threshold=60)
+            for cpu_id in free_cpus:
+                if task_queue.empty():
+                    break
 
-    # Continuously check CPU utilization and memory usage, and distribute tasks
-    while not task_queue.empty():
-        if not TaskScheduler.is_memory_available(memory_threshold=80):
-            print("Memory usage is high. Waiting...")
-            time.sleep(10)  # Wait for memory usage to drop
-            continue
-
-        # Check CPU utilization
-        free_cpus = TaskScheduler.get_available_cpus(utilization_threshold=60)
-        print(f"Free CPUs: {free_cpus}")
-
-        # Start a worker process for each free CPU
-        for cpu_id in free_cpus:
-            if not task_queue.empty():
-                p = multiprocessing.Process(target=TaskScheduler.worker, args=(task_queue, result_queue, cpu_id))
+                p = Process(
+                    target=TaskScheduler.worker,
+                    args=(task_queue, result_queue, cpu_id),
+                    daemon=False  # Critical: Ensures process won't terminate abruptly
+                )
                 p.start()
                 processes.append(p)
-                print(f"Started worker process on CPU {cpu_id}")
-                time.sleep(0.1)  # Small delay to avoid race conditions
+                time.sleep(0.1)  # Avoid overloading CPU
 
-        # Wait a bit before rechecking CPU utilization and memory usage
-        time.sleep(1)
+            time.sleep(5)  # Longer delay between checks (reduces CPU overhead)
 
-    # Wait for all processes to complete
-    for p in processes:
-        p.join()
+        # Block until all tasks are done
+        task_queue.join()
 
-    # Collect and print results
-    while not result_queue.empty():
-        print(result_queue.get())
+    except KeyboardInterrupt:
+        print("\n⚠️ Received interrupt. Waiting for running tasks to finish...")
+    finally:
+        # Ensure all processes terminate
+        for p in processes:
+            if p.is_alive():
+                p.join(timeout=30)  # Wait 30 sec for graceful exit
+
+        # Print results
+        print("\n📊 Results:")
+        while not result_queue.empty():
+            task_name, result = result_queue.get()
+            status = "✅ SUCCESS" if not str(result).startswith("Error:") else "❌ FAILED"
+            print(f"{task_name}: {status}")

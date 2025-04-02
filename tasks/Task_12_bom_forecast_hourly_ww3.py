@@ -25,7 +25,7 @@ def task_1():
                 print('nothing to do.')
 
 def task_2():
-    layer_id = [2,11,13,10,14]
+    layer_id = [2,11,13,10,14,12]
 
     for id in layer_id:
         api_url = PathManager.get_url('ocean-api',"layer_web_map/"+str(id)+"/")
