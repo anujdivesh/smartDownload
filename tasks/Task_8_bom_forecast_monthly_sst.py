@@ -7,7 +7,7 @@ from datetime import datetime
 from utility_functions import Utility
 from controller_server_path import PathManager
 from update_thredds import thredds
-
+import requests
 
 def task_1():
     url= PathManager.get_url('ocean-api','task_download')
@@ -21,6 +21,9 @@ def task_1():
             if task.id == 10 and execute:
                 print('Executing Task No.%s - %s' % (task.id, task.task_name))
                 task.dataDownload()
+                fname = task.next_download_file
+                task_3(fname, 10)
+
             else:
                 print('nothing to do.')
 
@@ -36,6 +39,18 @@ def task_2():
       else:
           raise ValueError("Dataset Period not found.")
 
+def task_3(file_name,id):
+    root_dir = PathManager.get_url('root-dir')
+    api_url = PathManager.get_url('ocean-api',"dataset/"+str(id)+"/")
+    response = requests.get(api_url)
+    data = response.json()
+
+    api_path = data['local_directory_path']
+    new_text = api_path.replace("{root-dir}", "")
+    usable_path = "%s%s" % (root_dir,new_text)
+    orig_file = "%s/%s" % (usable_path, 'latest.nc')
+    print("Mask Values...")
+    Utility.adjust_netCDF(orig_file)
 
 def bom_forecast_monthly_sst():
     task_1()

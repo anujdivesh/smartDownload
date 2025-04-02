@@ -501,3 +501,43 @@ class Utility:
             if os.path.exists(temp_path):
                 os.remove(temp_path)  # Clean up temp file on error
             raise e
+        
+    @staticmethod
+    def adjust_netCDF(file_path, threshold=50):
+        """
+        Set all values above a specified threshold to NaN in all variables of a NetCDF file.
+        Preserves the original file structure and metadata.
+
+        Args:
+            file_path (str): Path to the NetCDF file
+            threshold (float): Values above this will be set to NaN (default: 50)
+        """
+        # Create temp file path
+        temp_dir = os.path.dirname(file_path) or '.'
+        temp_path = os.path.join(temp_dir, f"temp_{os.path.basename(file_path)}")
+        
+        try:
+            with xr.open_dataset(file_path) as ds:
+                # Create a copy to modify
+                masked_ds = ds.copy()
+                
+                # Process each variable
+                for var_name in ds.variables:
+                    if var_name not in ds.dims:  # Skip coordinate variables
+                        # Mask values > threshold
+                        masked_ds[var_name] = ds[var_name].where(ds[var_name] <= threshold)
+                        print(f"Masked values > {threshold} in variable '{var_name}'")
+                
+                # Write to temporary file first
+                masked_ds.to_netcdf(temp_path, mode='w')
+                
+                # Replace original file
+                shutil.move(temp_path, file_path)
+                print(f"Successfully masked values > {threshold} in {file_path}")
+                
+        except Exception as e:
+            # Clean up temp file if error occurs
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            print(f"Error processing {file_path}: {str(e)}")
+            raise
