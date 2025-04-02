@@ -2,6 +2,7 @@ from netCDF4 import Dataset, num2date, date2num
 import numpy as np
 import datetime
 import os
+import xarray as xr
 
 # Set up server and output paths
 SERVER = "http://opendap.bom.gov.au:8080/thredds/dodsC/nmoc/oceanmaps_ofam_fc/ops/latest/"
@@ -61,6 +62,7 @@ class BlueLink:
         # Create subset
         full_file = os.path.join(data_dir, "Bluelink_currents_tmp.nc")
         subset_file = os.path.join(data_dir, "Bluelink_currents.nc")
+        print('subsetting......')
         BlueLink.subset_nc_file(full_file, subset_file, 100, 300, -45, 45)
 
     @staticmethod
@@ -130,7 +132,7 @@ class BlueLink:
             nc.variables["time"][x] = date2num(data_time, units=time_unit, calendar="gregorian")
             nc.variables[var_name1][x, :, :] = np.where(np.isnan(raw_data1), -30000, raw_data1)
             nc.variables[var_name2][x, :, :] = np.where(np.isnan(raw_data2), -30000, raw_data2)
-
+    """
     @staticmethod
     def subset_nc_file(input_file, output_file, lon_min=100, lon_max=300, lat_min=-45, lat_max=45):
         with Dataset(input_file, 'r') as src:
@@ -176,3 +178,91 @@ class BlueLink:
                     for attr in var.ncattrs():
                         if attr != '_FillValue':
                             new_var.setncattr(attr, var.getncattr(attr))
+    """
+    @staticmethod
+
+    def subset_nc_file(input_file, output_file, lon_min=100, lon_max=300, lat_min=-45, lat_max=45):
+        """
+        Robust NetCDF subsetting with xarray that preserves all data and handles edge cases.
+        
+        Args:
+            input_file (str): Path to input NetCDF file
+            output_file (str): Path for output subset file
+            lon_min (float): Minimum longitude (default: 100)
+            lon_max (float): Maximum longitude (default: 300)
+            lat_min (float): Minimum latitude (default: -45)
+            lat_max (float): Maximum latitude (default: 45)
+        
+        Returns:
+            None (writes to output_file)
+        """
+        try:
+            # Open dataset with automatic decoding
+            ds = xr.open_dataset(input_file, decode_cf=True)
+            
+            # Verify required coordinates exist
+            required_coords = ['lon', 'lat']
+            missing_coords = [coord for coord in required_coords if coord not in ds.coords]
+            if missing_coords:
+                raise ValueError(f"Missing required coordinates: {missing_coords}")
+            
+            # Handle longitude conventions (0-360 to -180-180 if needed)
+            if np.all(ds.lon > 180):
+                print("Converting longitude from 0-360 to -180-180 convention")
+                ds = ds.assign_coords(lon=(((ds.lon + 180) % 360) - 180))
+            
+            # Create slice conditions with bounds checking
+            lon_slice = slice(
+                max(lon_min, float(ds.lon.min())),
+                min(lon_max, float(ds.lon.max()))
+            )
+            lat_slice = slice(
+                max(lat_min, float(ds.lat.min())),
+                min(lat_max, float(ds.lat.max()))
+            )
+            
+            # Apply subset while preserving all variables
+            subset = ds.sel(
+                lon=lon_slice,
+                lat=lat_slice,
+                drop=False  # Preserves original dimensions
+            )
+            
+            # Verify subset contains data
+            if len(subset.lon) == 0 or len(subset.lat) == 0:
+                raise ValueError("Subset resulted in empty dataset - check your bounds")
+            
+            # Preserve all attributes and variables
+            encoding = {
+                var: {
+                    'zlib': True,
+                    'complevel': 5,
+                    '_FillValue': ds[var].attrs.get('_FillValue', None)
+                } 
+                for var in subset.data_vars
+            }
+            
+            # Write to temporary file first
+            temp_file = output_file + '.tmp'
+            subset.to_netcdf(
+                temp_file,
+                mode='w',
+                encoding=encoding,
+                unlimited_dims=['time'] if 'time' in subset.dims else None
+            )
+            
+            # Atomic write operation
+            import shutil
+            shutil.move(temp_file, output_file)
+            
+            print(f"Successfully created subset with dimensions:")
+            print(f"- Longitude: {len(subset.lon)} points ({subset.lon.values[0]:.2f} to {subset.lon.values[-1]:.2f})")
+            print(f"- Latitude: {len(subset.lat)} points ({subset.lat.values[0]:.2f} to {subset.lat.values[-1]:.2f})")
+            
+        except Exception as e:
+            print(f"Error during subsetting: {str(e)}")
+            # Clean up temporary file if it exists
+            import os
+            if 'temp_file' in locals() and os.path.exists(temp_file):
+                os.remove(temp_file)
+            raise
