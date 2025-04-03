@@ -26,7 +26,7 @@ def task_1():
 
 
 def task_2():
-    layer_id = [8]
+    layer_id = [31]
 
     for id in layer_id:
         api_url = PathManager.get_url('ocean-api',"layer_web_map/"+str(id)+"/")
@@ -41,3 +41,5 @@ def cmems_hindcast_daily_phytoplankton():
     task_1()
     task_2()
     return
+
+task_2()
