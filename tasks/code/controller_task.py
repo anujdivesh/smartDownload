@@ -548,7 +548,7 @@ class taskController(task):
         #COMPULSORY THINGS TO DO, UPDATE THE API
         new_file_name,new_download_time = self.generate_next_download_filename(ds)
         #download_succeed, is_error = True, False
-        #Utility.update_tasks(download_succeed, is_error, new_file_name,new_download_time,self,ds)
+        Utility.update_tasks(download_succeed, is_error, new_file_name,new_download_time,self,ds)
         
         print('data download completed.')
         return download_succeed, is_error
