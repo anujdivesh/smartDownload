@@ -40,6 +40,17 @@ def task_2():
       else:
           raise ValueError("Dataset Period not found.")
 
+def task_22():
+  layer_id = [26]
+
+  for id in layer_id:
+      api_url = PathManager.get_url('ocean-api',"layer_web_map/"+str(id)+"/")
+      
+      api_response = thredds.get_data_from_api(api_url)
+      if api_response['period'] == "OPENDAP":
+          thredds.get_specific_stamp(api_response)
+      else:
+          raise ValueError("Dataset Period not found.")
 
 def task_3(download_succeed,file_name,id):
     root_dir = PathManager.get_url('root-dir')
@@ -72,4 +83,5 @@ def cmems_nrt_daily_ssh():
     task_1()
     task_2()
     task_4()
+    task_22()
     return

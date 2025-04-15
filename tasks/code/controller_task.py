@@ -608,6 +608,11 @@ class taskController(task):
                 if not os.path.exists(input_file):
                     input_file = os.path.join(path_to_scan_prelim, ds2.download_file_prefix + current_day.strftime("%Y%m%d") + ds2.download_file_suffix)
                 if os.path.exists(input_file):
+                    nco.ncks(
+                        input=input_file,
+                        output=input_file,
+                        options=["--mk_rec_dmn", "time"]
+                    )
                     input_files.append(input_file)
                 else:
                     missing_days.append( current_day.strftime("%Y%m%d"))
@@ -669,11 +674,11 @@ class taskController(task):
                 else:
                     input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d") + ds.download_file_suffix)
                 if os.path.exists(input_file):
-                    nco.ncks(
-                        input=input_file,
-                        output=input_file,
-                        options=["--mk_rec_dmn", "time"]
-                    )
+                    #nco.ncks(
+                    #    input=input_file,
+                    #    output=input_file,
+                    #    options=["--mk_rec_dmn", "time"]
+                    #)
                     input_files.append(input_file)
                 else:
                     missing_days.append( current_day.strftime("%Y%m%d"))

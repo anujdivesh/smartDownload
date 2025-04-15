@@ -53,11 +53,23 @@ def task5():
             if task.id == 24 and execute:
                 task.CalcDecile()
 
+def task_22():
+  layer_id = [35,36]
 
+  for id in layer_id:
+      api_url = PathManager.get_url('ocean-api',"layer_web_map/"+str(id)+"/")
+      
+      api_response = thredds.get_data_from_api(api_url)
+      if api_response['period'] == "OPENDAP":
+          thredds.get_specific_stamp(api_response)
+      else:
+          raise ValueError("Dataset Period not found.")
 
 def noaa_hindcast_daily_sst_anomalies():
     task_1()
     task3()
     task4()
+    task_22()
     #task5()
     return
+
