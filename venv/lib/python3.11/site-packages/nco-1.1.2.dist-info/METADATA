@@ -1,0 +1,64 @@
+Metadata-Version: 2.1
+Name: nco
+Version: 1.1.2
+Summary: python bindings to NCO
+Author: Joe Hamman
+Author-email: jhamman@ucar.edu
+License: MIT
+Project-URL: Source, https://github.com/nco/pynco
+Project-URL: Documentation, https://pynco.readthedocs.org
+Keywords: netcdf,climate
+Classifier: Development Status :: 4 - Beta
+Classifier: Topic :: Utilities
+Classifier: Operating System :: POSIX
+Classifier: Programming Language :: Python
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+Requires-Dist: numpy
+Requires-Dist: packaging
+
+# pynco
+
+Python bindings for [NCO](http://nco.sourceforge.net/).  A fork from Ralf Mueller's [cdo-bindings](https://github.com/Try2Code/cdo-bindings).
+
+This package contains the python module `nco`, which implements a python style access to the [NetCDF Operators (NCO)](http://nco.sourceforge.net/). NCO is a command line tool for processing netCDF data. Its main focus is climate data, but it can by used for other purposes too.
+
+
+## Documentation
+
+Read the documentation at [pynco.readthedocs.org](https://pynco.readthedocs.io/)
+
+## Installation
+
+### Conda Installation (recommended)
+
+This will install all required and optional dependencies and is the quickest and easiest way to a working `pynco` installation.
+
+```bash
+conda install -c conda-forge pynco
+```
+### PyPI Installation
+
+Please see [the requirements](https://pynco.readthedocs.org/en/latest/#requirements) before installing
+
+```bash
+pip install nco
+```
+## Example
+
+```python
+from nco import Nco
+nco = Nco()
+temperatures = nco.ncra(input='input.nc', returnCdf=True).variables['T'][:]
+```
+## Support, issues, bugs, ...
+
+Please use the github page to report issues, bugs, and features:
+https://github.com/nco/pynco.
+
+For usage questions, please use [Stack Overflow](https://stackoverflow.com/questions/tagged/nco).
+
+## License
+
+`pynco` makes use of the MIT License, see LICENSE.txt.

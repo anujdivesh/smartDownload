@@ -85,3 +85,8 @@ def cmems_nrt_daily_ssh():
     task_4()
     task_22()
     return
+#task_4()
+
+#for i in range(59):  # 0 to 34 (35 iterations)
+#    task_1()
+#    print(f"Iteration {i + 1}")

@@ -54,7 +54,7 @@ def task5():
                 task.CalcDecile()
 
 def task_22():
-  layer_id = [35,36]
+  layer_id = [35,36,37]
 
   for id in layer_id:
       api_url = PathManager.get_url('ocean-api',"layer_web_map/"+str(id)+"/")
@@ -70,6 +70,8 @@ def noaa_hindcast_daily_sst_anomalies():
     task3()
     task4()
     task_22()
-    #task5()
+    task5()
     return
+
+task_22()
 

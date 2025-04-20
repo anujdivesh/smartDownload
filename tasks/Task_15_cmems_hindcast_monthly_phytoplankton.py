@@ -42,4 +42,5 @@ def cmems_hindcast_daily_phytoplankton():
     task_2()
     return
 
-task_2()
+#task_2()
+

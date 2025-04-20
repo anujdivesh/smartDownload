@@ -674,11 +674,11 @@ class taskController(task):
                 else:
                     input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d") + ds.download_file_suffix)
                 if os.path.exists(input_file):
-                    #nco.ncks(
-                    #    input=input_file,
-                    #    output=input_file,
-                    #    options=["--mk_rec_dmn", "time"]
-                    #)
+                    nco.ncks(
+                        input=input_file,
+                        output=input_file,
+                        options=["--mk_rec_dmn", "time"]
+                    )
                     input_files.append(input_file)
                 else:
                     missing_days.append( current_day.strftime("%Y%m%d"))
@@ -835,11 +835,11 @@ class taskController(task):
                 else:
                     input_file = os.path.join(path_to_scan, ds.download_file_prefix + current_day.strftime("%Y%m%d") + ds.download_file_suffix)
                 if os.path.exists(input_file):
-                    nco.ncks(
-                        input=input_file,
-                        output=input_file,
-                        options=["--mk_rec_dmn", "time"]
-                    )
+                    #nco.ncks(
+                    #    input=input_file,
+                    #    output=input_file,
+                    #    options=["--mk_rec_dmn", "time"]
+                    #)
                     input_files.append(input_file)
                 else:
                     missing_days.append( current_day.strftime("%Y%m%d"))
@@ -1033,9 +1033,8 @@ class taskController(task):
                     continue
     """
     def CalcDecile(self):
-        url= PathManager.get_url('ocean-api','dataset')
-        #dataset_url = "https://dev-oceanportal.spc.int/v1/api/dataset/%s" % (self.dataset_id)
-        dataset_url = "%s/%s" % (url,self.dataset_id)
+        url = PathManager.get_url('ocean-api', 'dataset')
+        dataset_url = "%s/%s" % (url, self.dataset_id)
         dset = initialize_datasetController(dataset_url)
         path_to_scan = dset.local_directory_path
         root_dir = PathManager.get_url('root-dir')
@@ -1057,7 +1056,6 @@ class taskController(task):
         month = int(year_month[4:])
 
         files = sorted(glob.glob(os.path.join(input_path, "*.nc")))
-
         variable_name = "sst"  
         
         # Filter files to prioritize final over preliminary
@@ -1124,24 +1122,48 @@ class taskController(task):
         category_map[(latest_sst > deciles[7]) & (latest_sst <= deciles[8])] = 10  # Very much above average
         category_map[latest_sst > deciles[8]] = 11  # Highest on record
 
-        # Save deciles to a new NetCDF file
-        month_name = time_array[month_indices[-1]].strftime("%B").lower()  # Get month name (e.g., "february")
+        # Save deciles to a new NetCDF file with time dimension
         output_file = os.path.join(out_path, output_file_name)
         with nc.Dataset(output_file, "w", format="NETCDF4") as ds_out:
             with nc.Dataset(selected_files[0], "r") as ds_ref:
-                # Copy dimensions from the reference file
+                # Copy dimensions from the reference file (except time)
                 for dim_name, dim_obj in ds_ref.dimensions.items():
-                    ds_out.createDimension(dim_name, len(dim_obj))
-
-                # Copy latitude & longitude variables while ds_ref is still open
+                    if dim_name != 'time':
+                        ds_out.createDimension(dim_name, len(dim_obj))
+                
+                # Create time dimension
+                ds_out.createDimension('time', 1)
+                
+                # Copy latitude & longitude variables
                 for var_name in ["lat", "lon"]:
                     var_ref = ds_ref.variables[var_name]
                     var_out = ds_out.createVariable(var_name, var_ref.datatype, var_ref.dimensions)
-                    var_out[:] = var_ref[:]  # Copy data
-
-            # Save category map
-            category_var = ds_out.createVariable("sst_category", "i4", ("lat", "lon"))
-            category_var[:] = category_map
+                    var_out[:] = var_ref[:]
+                    # Copy attributes
+                    for attr_name in var_ref.ncattrs():
+                        if attr_name != '_FillValue':
+                            var_out.setncattr(attr_name, var_ref.getncattr(attr_name))
+            
+            # Create time variable
+            time_var = ds_out.createVariable('time', 'f8', ('time',))
+            time_var.units = 'days since 0001-01-01 00:00:00'
+            time_var.calendar = 'gregorian'
+            time_var.long_name = 'time'
+            time_var.standard_name = 'time'
+            
+            # Set the time value (year-month-01 00:00:00)
+            time_value = nc.date2num(datetime(year, month, 1, 0, 0, 0),
+                                   units=time_var.units,
+                                   calendar=time_var.calendar)
+            time_var[:] = time_value
+            
+            # Create and save category map with time dimension
+            category_var = ds_out.createVariable("sst_category", "i4", ("time", "lat", "lon"))
+            category_var.long_name = "Sea Surface Temperature Percentile Category"
+            category_var.units = "1"
+            category_var.description = "1:Lowest on record, 2:Very much below average, 3:Below average, " + \
+                                      "5:Average, 8:Above average, 10:Very much above average, 11:Highest on record"
+            category_var[0, :, :] = category_map  # Add time dimension
         
         print('Decile computed successfully.')
         download_succeed = True
@@ -1149,11 +1171,10 @@ class taskController(task):
             date_obj = datetime.strptime(year_month, "%Y%m")
             new_date_obj = date_obj + relativedelta(months=1)
             new_year_month = new_date_obj.strftime("%Y%m")
-            new_file_name = dset.download_file_prefix+"decile."+new_year_month+dset.download_file_suffix
+            new_file_name = dset.download_file_prefix + "decile." + new_year_month + dset.download_file_suffix
             new_date_obj2 = date_obj + relativedelta(months=2)
             new_date_obj2 -= timedelta(days=1)
-            Utility.update_tasks(download_succeed, is_error, new_file_name,new_date_obj2,self,ds)
-        #print(year,month)
+            Utility.update_tasks(download_succeed, is_error, new_file_name, new_date_obj2, self, ds)
 
 
 #LOAD VARIABLES FROM API INTO THE CLASS

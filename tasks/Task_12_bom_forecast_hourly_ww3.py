@@ -42,3 +42,4 @@ def bom_forecast_hourly_ww3():
     task_2()
     return
 
+#bom_forecast_hourly_ww3()

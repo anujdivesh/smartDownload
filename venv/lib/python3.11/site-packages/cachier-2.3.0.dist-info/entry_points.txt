@@ -1,0 +1,2 @@
+[console_scripts]
+cachier = cachier.__naim__:cli

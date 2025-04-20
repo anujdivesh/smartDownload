@@ -31,7 +31,7 @@ from Task_18_noaa_nrt_daily_mhw import noaa_nrt_daily_mhw as Task18
 
 if __name__ == "__main__":
     # List of functions to execute
-    functions = [Task1, Task2, Task3, Task4, Task5, Task6, Task7, Task8, Task9, Task10, Task11, Task12,\
+    functions = [Task1, Task2, Task3, Task4, Task5, Task6, Task7, Task8, Task9, Task10, Task11,\
                  Task13, Task14,Task15,Task16, Task17,Task18]
 
     # Create a task queue and a result queue

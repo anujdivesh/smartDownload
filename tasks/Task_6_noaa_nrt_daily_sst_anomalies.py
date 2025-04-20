@@ -23,7 +23,7 @@ def task_1():
                 task.dataDownload()
 
 def task_2():
-  layer_id = [5]
+  layer_id = [5,7]
 
   for id in layer_id:
       api_url = PathManager.get_url('ocean-api',"layer_web_map/"+str(id)+"/")
@@ -39,3 +39,4 @@ def noaa_nrt_daily_sst_anomalies():
     task_1()
     task_2()
     return
+#noaa_nrt_daily_sst_anomalies()
